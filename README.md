@@ -100,7 +100,7 @@ These shaders are executed in parallel by hundreds of GPU cores (which are small
 
 To illustrate the use of compute shaders in WebGPU, we'll play with matrix multiplication, a common algorithm in machine learning illustrated below .
 
-![4aa372343a249bfee6049b572d6eca12.png](:/e5c1e41ee59b4abd97720034443686ab)
+![Screenshot]([:/e5c1e41ee59b4abd97720034443686ab](https://web-dev.imgix.net/image/vvhSqZboQoZZN9wBvoXq72wzGAf1/q9PYk219Ykt873iQa0Vc.jpeg?auto=format&w=1428))
 
 In short, here's what we're going to do :
 
