@@ -86,4 +86,4 @@ const copyArrayBuffer = gpuReadBuffer.getMappedRange();
 console.log(new UintArray(copyArrayBuffer));
 ```
 
-
+Continue ...
