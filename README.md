@@ -88,3 +88,5 @@ console.log(new UintArray(copyArrayBuffer));
 
 Programs running on the GPU that only perform computations (and don't draw triangles) are called compute shaders. 
 These shaders are executed in parallel by hundreds of GPU cores (which are smaller than CPU cores) that operate together to crunch data. Their input and outputs are buffers in WebGPU .
+
+![4aa372343a249bfee6049b572d6eca12.png](:/e5c1e41ee59b4abd97720034443686ab)
