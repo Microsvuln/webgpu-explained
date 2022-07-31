@@ -91,3 +91,191 @@ These shaders are executed in parallel by hundreds of GPU cores (which are small
 
 ![Screenshot](https://web-dev.imgix.net/image/vvhSqZboQoZZN9wBvoXq72wzGAf1/q9PYk219Ykt873iQa0Vc.jpeg))
 
+
+
+## Shader Programming
+
+Programs running on the GPU that only perform computations (and don't draw triangles) are called compute shaders. 
+These shaders are executed in parallel by hundreds of GPU cores (which are smaller than CPU cores) that operate together to crunch data. Their input and outputs are buffers in WebGPU .
+
+To illustrate the use of compute shaders in WebGPU, we'll play with matrix multiplication, a common algorithm in machine learning illustrated below .
+
+![4aa372343a249bfee6049b572d6eca12.png](:/e5c1e41ee59b4abd97720034443686ab)
+
+In short, here's what we're going to do :
+
+1. Create three GPU buffers (two for the matrices to multiply and one for the result matrix) .
+2. Describe input and output for the compute shader .
+3. Compile the compute shader code.
+4. Setup a compute pipeline .
+5. Submit in batch the encoded commands to the GPU.
+6. Read the result matrix GPU buffer.
+
+### GPU Buffer creation
+
+For the sake of simplicity, matrices will be represented as a list of floating point numbers. The first element is the number of rows, the second element the number of columns, and the rest is the actual numbers of the matrix.
+
+
+![c97ac9edca8cf6b6ffaad9fa072b7571.png](:/fed169b41f7d4b65930744236c584fd1)
+
+
+The three GPU buffers are storage buffers as we need to store and retrieve data in the compute shader. This explains why the GPU buffer usage flags include `GPUBufferUsage.STORAGE` for all of them. The result matrix usage flag also has `GPUBufferUsage.COPY_SRC `because it will be copied to another buffer for reading once all GPU queue commands have all been executed.
+
+```
+const adapter = await navigator.gpu.requestAdapter();
+if (!adapter) { return; }
+const device = await adapter.requestDevice();
+
+
+// First Matrix
+
+const firstMatrix = new Float32Array([
+  2 /* rows */, 4 /* columns */,
+  1, 2, 3, 4,
+  5, 6, 7, 8
+]);
+
+const gpuBufferFirstMatrix = device.createBuffer({
+  mappedAtCreation: true,
+  size: firstMatrix.byteLength,
+  usage: GPUBufferUsage.STORAGE,
+});
+const arrayBufferFirstMatrix = gpuBufferFirstMatrix.getMappedRange();
+new Float32Array(arrayBufferFirstMatrix).set(firstMatrix);
+gpuBufferFirstMatrix.unmap();
+
+
+// Second Matrix
+
+const secondMatrix = new Float32Array([
+  4 /* rows */, 2 /* columns */,
+  1, 2,
+  3, 4,
+  5, 6,
+  7, 8
+]);
+
+
+const gpuBufferSecondMatrix = device.createBuffer({
+  mappedAtCreation: true,
+  size: secondMatrix.byteLength,
+  usage: GPUBufferUsage.STORAGE,
+});
+const arrayBufferSecondMatrix = gpuBufferSecondMatrix.getMappedRange();
+new Float32Array(arrayBufferSecondMatrix).set(secondMatrix);
+gpuBufferSecondMatrix.unmap();
+
+
+// Result Matrix
+
+const resultMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * (2 + firstMatrix[0] * secondMatrix[1]);
+const resultMatrixBuffer = device.createBuffer({
+  size: resultMatrixBufferSize,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+});
+```
+
+
+### Bind group layout and bind group
+
+Concepts of bind group layout and bind group are specific to WebGPU. A bind group layout defines the input/output interface expected by a shader, while a bind group represents the actual input/output data for a shader.
+
+In the example below, the bind group layout expects two readonly storage buffers at numbered entry bindings 0, 1, and a storage buffer at 2 for the compute shader. The bind group on the other hand, defined for this bind group layout, associates GPU buffers to the entries: `gpuBufferFirstMatrix` to the binding 0, `gpuBufferSecondMatrix` to the binding 1, and resultMatrixBuffer to the binding 2.
+
+```
+const bindGroupLayout = device.createBindGroupLayout({
+  entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.COMPUTE,
+      buffer: {
+        type: "read-only-storage"
+      }
+    },
+    {
+      binding: 1,
+      visibility: GPUShaderStage.COMPUTE,
+      buffer: {
+        type: "read-only-storage"
+      }
+    },
+    {
+      binding: 2,
+      visibility: GPUShaderStage.COMPUTE,
+      buffer: {
+        type: "storage"
+      }
+    }
+  ]
+});
+
+const bindGroup = device.createBindGroup({
+  layout: bindGroupLayout,
+  entries: [
+    {
+      binding: 0,
+      resource: {
+        buffer: gpuBufferFirstMatrix
+      }
+    },
+    {
+      binding: 1,
+      resource: {
+        buffer: gpuBufferSecondMatrix
+      }
+    },
+    {
+      binding: 2,
+      resource: {
+        buffer: resultMatrixBuffer
+      }
+    }
+  ]
+});
+```
+
+
+### Compute shader code
+
+The compute shader code for multiplying matrices is written in WGSL, the WebGPU Shader Language, that is trivially translatable to SPIR-V. Without going into detail, you should find below the three storage buffers identified with var<storage>. The program will use `firstMatrix` and `secondMatrix` as inputs and resultMatrix as its output.
+
+Note that each storage buffer has a `binding` decoration used that corresponds to the same index defined in bind group layouts and bind groups declared above.
+
+```
+const shaderModule = device.createShaderModule({
+  code: `
+    struct Matrix {
+      size : vec2<f32>,
+      numbers: array<f32>,
+    }
+
+    @group(0) @binding(0) var<storage, read> firstMatrix : Matrix;
+    @group(0) @binding(1) var<storage, read> secondMatrix : Matrix;
+    @group(0) @binding(2) var<storage, write> resultMatrix : Matrix;
+
+    @stage(compute) @workgroup_size(8, 8)
+    fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+      // Guard against out-of-bounds work group sizes
+      if (global_id.x >= u32(firstMatrix.size.x) || global_id.y >= u32(secondMatrix.size.y)) {
+        return;
+      }
+
+      resultMatrix.size = vec2(firstMatrix.size.x, secondMatrix.size.y);
+
+      let resultCell = vec2(global_id.x, global_id.y);
+      var result = 0.0;
+      for (var i = 0u; i < u32(firstMatrix.size.y); i = i + 1u) {
+        let a = i + resultCell.x * u32(firstMatrix.size.y);
+        let b = resultCell.y + i * u32(secondMatrix.size.y);
+        result = result + firstMatrix.numbers[a] * secondMatrix.numbers[b];
+      }
+
+      let index = resultCell.y + resultCell.x * u32(secondMatrix.size.y);
+      resultMatrix.numbers[index] = result;
+    }
+  `
+});
+```
+
+
+
