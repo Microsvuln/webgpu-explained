@@ -1,7 +1,3 @@
-# webgpu-explained
-Detailed explanation of WebGPU
-
-
 # Fuzzing webgpu
 
 Useful links to start with :
@@ -86,4 +82,9 @@ const copyArrayBuffer = gpuReadBuffer.getMappedRange();
 console.log(new UintArray(copyArrayBuffer));
 ```
 
-Continue ...
+
+
+## Shader Programming
+
+Programs running on the GPU that only perform computations (and don't draw triangles) are called compute shaders. 
+These shaders are executed in parallel by hundreds of GPU cores (which are smaller than CPU cores) that operate together to crunch data. Their input and outputs are buffers in WebGPU .
