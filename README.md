@@ -115,8 +115,7 @@ In short, here's what we're going to do :
 
 For the sake of simplicity, matrices will be represented as a list of floating point numbers. The first element is the number of rows, the second element the number of columns, and the rest is the actual numbers of the matrix.
 
-
-![c97ac9edca8cf6b6ffaad9fa072b7571.png](:/fed169b41f7d4b65930744236c584fd1)
+![Screenshot](https://web-dev.imgix.net/image/vvhSqZboQoZZN9wBvoXq72wzGAf1/IUv15DMl2yDwTGxeJNux.jpeg?auto=format&w=1428))
 
 
 The three GPU buffers are storage buffers as we need to store and retrieve data in the compute shader. This explains why the GPU buffer usage flags include `GPUBufferUsage.STORAGE` for all of them. The result matrix usage flag also has `GPUBufferUsage.COPY_SRC `because it will be copied to another buffer for reading once all GPU queue commands have all been executed.
