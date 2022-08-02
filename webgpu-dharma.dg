@@ -1,0 +1,58 @@
+%section% := value
+
+thermometer_prob :=
+	value
+	text
+	duration
+	cancelled
+	
+adapter_setter :=
+		!adapter!.value = +common:number+
+		!adapter!.text = +common:character+
+		!adapter!.duration = %range%(0-10000)
+		!adapter!.cancelled = +common:bool+
+		
+device_setter :=		
+		!device! = await !adapter!.requestDevice();
+		
+buffer_setter :=
+		!buffer! = !device!.createBuffer({ mappedAtCreation: true, size : 4, usage: GPUBufferUsage.MAP_WRITE });
+		
+arrayBuffer_setter :=
+		!arrayBuffer! = !buffer!.getMappedRange(); 	
+
+thermometer_getter := 
+	var x+common:digit+ = !adapter!.+thermometer_prob+
+
+thermometer_functions :=
+	begin()
+	end()
+
+wrapper :=
+	try{+adapter_setter+}catch(e)
+	try {+device_setter+}catch(e)
+	try {+buffer_setter+}catch(e)
+	try {+arrayBuffer_setter+}catch(e)
+
+	
+
+%section% := variable
+	
+
+adapter :=	
+	const @adapter@ = await navigator.gpu.requestAdapter();
+
+	
+device  :=
+	const @device@ = await @adapter@.requestDevice();
+	
+buffer  :=
+	const @buffer@ = !device!.createBuffer({ mappedAtCreation: true, size : 4, usage: GPUBufferUsage.MAP_WRITE });
+
+arrayBuffer :=
+	const @arrayBuffer@ = !buffer!.getMappedRange(); 
+
+%section% := variance
+main :=
+	+wrapper+
+	
