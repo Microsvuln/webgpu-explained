@@ -6,6 +6,7 @@ Useful links to start with :
 
 ` https://www.willusher.io/graphics/2021/08/29/0-to-gltf-triangle `
 
+` https://austin-eng.com/webgpu-samples/samples/imageBlur `
 
 
 ### Webgpu Specifications
