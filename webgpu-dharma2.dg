@@ -1,0 +1,109 @@
+%section% := value
+
+thermometer_prob :=
+	value
+	text
+	duration
+	cancelled
+	
+adapter_setter :=
+		!adapter!.value = +common:number+
+		!adapter!.text = +common:character+
+		!adapter!.duration = %range%(0-10000)
+		!adapter!.cancelled = +common:bool+
+		
+device_setter :=		
+		!device! = await !adapter!.requestDevice();
+		
+buffer_setter :=
+		!buffer! = !device!.createBuffer({ mappedAtCreation: true, size : 4, usage: GPUBufferUsage.MAP_WRITE });
+		
+arrayBuffer_setter :=
+		!arrayBuffer! = !buffer!.getMappedRange();
+
+Uint8Arrays_setter :=
+		new Uint8Array(!arrayBuffer!).set([0, 1, 2, 3]);
+		
+arrayBufferUnmapSetter :=
+	!arrayBuffer!.unmap()
+
+thermometer_getter := 
+	var x+common:digit+ = !adapter!.+thermometer_prob+
+
+gpuReadBufferSetter :=
+	const !gpuReadBuffer! = !device!.createBuffer({ size: 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+
+gpuWriteBufferSetter :=
+	const !gpuWriteBuffer! = !device!.createBuffer({ mappedAtCreation: true, size: 4, usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC });
+
+createCmdEncodeSetter :=
+	const !createCmdEncode! = !device!.createCommandEncoder();
+
+cpyBufToBufSetter :=
+	!createCmdEncode!.copyBufferToBuffer(!gpuWriteBuffer!, 0, !gpuReadBuffer!, 0, 4);	
+
+copyEncoderFinishSetter :=
+	const !copyEncoderFinish! = !createCmdEncode!.finish();
+
+copyCommandSubmitSetter :=
+	!device!.queue.submit([!copyEncoderFinish!]);
+
+thermometer_functions :=
+	begin()
+	end()
+
+wrapper :=
+	try{+adapter_setter+}catch(e)
+	try {+device_setter+}catch(e)
+	try {+buffer_setter+}catch(e)
+	try {+arrayBuffer_setter+}catch(e)
+	try {+Uint8Arrays_setter+}catch(e)
+	try {+arrayBufferUnmapSetter+}catch(e)
+	try {+gpuReadBufferSetter+}catch(e)
+	try {+gpuWriteBufferSetter+}catch(e)
+	try {+createCmdEncodeSetter+}catch(e)
+	try {+cpyBufToBufSetter+}catch(e)
+	try {+copyEncoderFinishSetter+}catch(e)
+	try {+copyCommandSubmitSetter+}catch(e)
+
+	
+
+%section% := variable
+	
+
+adapter :=	
+	const @adapter@ = await navigator.gpu.requestAdapter();
+
+	
+device  :=
+	const @device@ = await @adapter@.requestDevice();
+	
+buffer  :=
+	const @buffer@ = !device!.createBuffer({ mappedAtCreation: true, size : 4, usage: GPUBufferUsage.MAP_WRITE });
+
+arrayBuffer :=
+	const @arrayBuffer@ = !buffer!.getMappedRange(); 
+
+gpuReadBuffer :=
+		const @gpuReadBuffer@ = !device!.createBuffer({ size: 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+
+gpuWriteBuffer :=
+		const @gpuWriteBuffer@ = !device!.createBuffer({ mappedAtCreation: true, size: 4, usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC });
+
+	
+Uint8Array :=
+	new @Uint8Array@(!arrayBuffer!).set([0, 1, 2, 3]);
+
+
+createCmdEncode :=
+	const @createCmdEncode@ = !device!.createCommandEncoder();
+
+
+copyEncoderFinish :=
+	const @copyEncoderFinish@ = !createCmdEncode!.finish();
+
+
+%section% := variance
+main :=
+	+wrapper+
+	
